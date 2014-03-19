@@ -1,0 +1,206 @@
+/*
+
+Copyright: All contributers to the Umple Project
+
+This file is made available subject to the open source license found at:
+http://umple.org/license
+
+State machine meta-model
+
+*/
+
+namespace cruise.umple.compiler;
+
+/*
+ * An entity in a running program that can have a set of values (states) and which
+ * changes values by taking transitions in response to various events.
+ */
+class StateMachine
+{
+  depend cruise.umple.util.*;
+  Integer recentSearchDepth = -1;
+  name;
+  * -- 0..1 UmpleClass;
+  
+  * -- 0..1 UmpleTrait;
+  
+  * nestedStateMachines -- 0..1 State parentState;
+  
+  key { parentState, name } 
+  
+  before setUmpleClass { if (aUmpleClass != null && aUmpleClass.isImmutable()) { return false; } }
+  before setUmpleTrait { if (aUmpleTrait != null && aUmpleTrait.isImmutable()) { return false; } }
+  
+  Boolean queued = false;
+  Boolean pooled = false;
+}
+
+/*
+ * One of the values in which a state machine can be at any given point in time
+ */
+class State
+{
+  name;
+  Boolean isConcurrent = { numberOfNestedStateMachines() > 1 }
+    
+  1 -- 0..1 Activity;
+  0..1 -> * Action;
+  * -- 1 StateMachine;
+
+  Boolean isStartState = false;
+  Boolean isInternal = false;  // for code generation only e.g. ouside scope of nested state
+  Boolean isHistoryState = false;
+  Boolean isDeepHistoryState = false;
+  Boolean finalState = false;
+  //Boolean containsHistoryState = false;
+  //Boolean containsDeepHistoryState = false;
+  //State mostRecentState; //will be in dot notation, if used by historyState, only look at first part?
+  
+  before isFinalState { if ("Final".equals(name)) { finalState = true; } }
+  //before isAHistoryState { if ("H".equals(name)) { isHistoryState = true; } }
+  //before isADeepHistoryState { if ("H*".equals(name)) { isDeepHistoryState = true; } }
+}
+
+/* 
+ * Some code to execute for an extended period while in a state
+ * This code is found after they keyword 'do' in Umple
+ * The code is executed in a separate threat, and can be terminated by
+ * an outgoing transition. Upon completion of the activity, any
+ * autotransition will be taken 
+ */
+class Activity
+{
+  depend cruise.umple.compiler.Position;
+
+  lazy Position position;
+  lazy Position endPosition;
+  activityCode;  // target language code
+  
+    
+  * -> 0..1 Event onCompletionEvent;
+  
+  CodeBlock codeblock = null;
+  after constructor {codeblock = aActivityCode!=null ? new CodeBlock(aActivityCode) : new CodeBlock();}
+  before setActivityCode {codeblock.setCode(aActivityCode);}
+  after getActivityCode{
+  	if (codeblock.getCode()!=null)
+  	  return codeblock.getCode();
+  	  else
+  	
+  	}
+  after setCodeblock {
+  	if(activityCode!=null){
+  	  activityCode+= aCodeblock.getCode();
+  	}
+  	else
+  	  activityCode = aCodeblock.getCode();
+  }
+  void setActivityCode(String lang, String code)
+  {
+  	if(activityCode!=null){
+  	  activityCode+= lang+code;
+  	}
+  	else
+  	  activityCode = lang+code;
+  	codeblock.setCode(lang,code);
+  }
+}
+/* 
+ * Specifies, within a state, what happens with a certain event (method call) occurs
+ * Normally the state machine will go to a new state after executing various actions and
+ * activities.
+ * The guard is a boolean condition that may prevent triggering the transition
+ */
+class Transition
+{
+    
+  Boolean isInternal = false;
+  Boolean autoTransition = false;
+
+  * -> 0..1 Event; 
+  * -- 1 State fromState;  
+  * nextTransition -- 1 State nextState;
+  * -> 0..1 Guard;
+  0..1 -> 0..1 Action;
+  
+  key { fromState, event, nextState, guard, action } 
+  
+}
+
+/*
+ * A quickly-executed block of code that is run upon entry or exit from a state
+ */
+class Action
+{
+  depend cruise.umple.compiler.Position;
+  
+  lazy actionType;
+  lazy Position position;
+  lazy Position endPosition;
+  actionCode;  // target language code
+  Boolean isInternal = false;
+  
+  CodeBlock codeblock = null;
+  after constructor {codeblock = aActionCode!=null ? new CodeBlock(aActionCode) : new CodeBlock();}
+  before setActionCode {codeblock.setCode(aActionCode);}
+  after getActionCode{
+  	if (codeblock.getCode()!=null)
+  	  return codeblock.getCode();
+  	  else
+  	
+  	}
+  after setCodeblock {
+  	if(actionCode!=null){
+  	  actionCode+= aCodeblock.getCode();
+  	}
+  	else
+  	  actionCode = aCodeblock.getCode();
+  }
+  void setActionCode(String lang, String code)
+  {
+  	if(actionCode!=null){
+  	  actionCode+= lang+code;
+  	}
+  	else 
+  	  actionCode = lang+code;
+  	codeblock.setCode(lang,code);
+  }
+  
+  key { actionType, actionCode } 
+}
+
+class Event
+{
+  name;
+  //String args = null;
+  Boolean isTimer = false;
+  Boolean autoTransition = false;
+  timerInSeconds = "0";  // TODO: how do you specify milliseconds etc.
+
+  Boolean isInternal = false;  // for code generation only e.g. ouside scope of nested state
+
+  Boolean unspecified = false;
+  
+  // The event parameters.
+  1 -> 0..* MethodParameter params;
+    
+  key { name }
+}
+
+/*
+ * A boolean condition that is checked when an event method is called
+ * If the result is true the transition may be taken
+ */
+class Guard
+{
+  depend cruise.umple.compiler.Position;
+  
+  isA Constraint;
+  
+  lazy Position position;
+  lazy Position endPosition;
+  
+}
+
+use Umple.ump;
+use StateMachine_Code.ump;

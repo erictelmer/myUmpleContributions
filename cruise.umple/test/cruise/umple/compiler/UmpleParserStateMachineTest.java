@@ -164,6 +164,19 @@ public class UmpleParserStateMachineTest
   public void dotNotation(){
     assertNoWarnings("519_dotNotation.ump");
     
+    UmpleClass c = model.getUmpleClass("X");
+    //assert num state machines = 2?
+    System.out.println("Num state machines: " + c.numberOfStateMachines());
+    StateMachine sm = c.getStateMachine(0);
+    State s1 = sm.getState(0);
+    StateMachine innerSm = s1.getNestedStateMachine(0);
+    State ss1 = innerSm.getState(0);
+    
+    State s2 = sm.getState(1);
+    Transition t = s2.getTransition(0);
+    
+    Assert.assertEquals(ss1, t.getNextState());
+
   }
   
   @Test

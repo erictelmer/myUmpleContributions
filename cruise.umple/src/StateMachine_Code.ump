@@ -241,7 +241,8 @@ class StateMachine
     StateMachine root = this;
     State nextState;
     
-    String[] stateNames = aName.split(".");
+    String[] stateNames = aName.split("\\.");
+    System.out.println("aName: " + aName + "  StateNames length: " + stateNames.length + " StateNames: " + stateNames[0]);
     int stateNameIndex = 0;
     String stateNameToFind = stateNames[stateNameIndex];
     
@@ -250,6 +251,7 @@ class StateMachine
       nextState = root.findState(stateNameToFind, false);
       if (nextState != null)
       {
+        System.out.println("found first state");
         root = nextState.getStateMachine();
         break;
       }
@@ -261,19 +263,29 @@ class StateMachine
       }
     }
     
-    stateNameIndex += 1;
+    //Enter found state's state machine
+    
+     
+    stateNameIndex = 1;
     while(stateNameIndex < stateNames.length)
     {
       stateNameToFind = stateNames[stateNameIndex];
-      nextState = root.findState(stateNameToFind, false);
+      System.out.println("About to search for " + stateNameToFind);
+      for (StateMachine sm : nextState.getNestedStateMachines())
+      {  
+        for (State s : sm.states)
+        {
+          System.out.println("State Name: " + s.getName());
+        } 
+        nextState = sm.findState(stateNameToFind, false);
+        System.out.println("findState returned " + nextState);
+        if(nextState != null){break;}
+      }
       //if the next state in dot noation is not found in previous state in dot notation, return null
       if(nextState == null){return null;}
-      
-      root = nextState.getStateMachine();
-      
+             
       stateNameIndex += 1;
     }
-    //end
     
     return nextState;
   }

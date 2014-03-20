@@ -36,7 +36,7 @@ class UmpleInternalParser
   //Checks to see if stateName is alpha-numeric or H*, for deep history
   private void checkStateNameOfToken(Token myToken){
     //allow H* for deep history state
-    String[] stateNames = myToken.getValue("stateName").split(".");
+    String[] stateNames = myToken.getValue("stateName").split("\\.");
     for(String stateName : stateNames)
     {
       if (stateName.equals("H*")){
@@ -458,7 +458,7 @@ class UmpleInternalParser
       if(nextState == null)
       {
         //setFailedPosition
-        setFailedPosition(transitionToken.getPosition(), 54, transitionToken.getValue("stateName"));
+        setFailedPosition(transitionToken.getPosition(), 63, transitionToken.getValue("stateName"));
       }
     }
     else{nextState = sm.findState(name);}

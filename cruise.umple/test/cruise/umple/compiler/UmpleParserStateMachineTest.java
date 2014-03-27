@@ -161,20 +161,52 @@ public class UmpleParserStateMachineTest
   }
   
   @Test
-  public void dotNotation(){
-    assertNoWarnings("519_dotNotation.ump");
+  public void dotNotationInvalid(){
+    assertHasWarning("519_dotNotationInvalidState.ump", 0, 50, new Position("519_dotNotationInvalidState.ump", 12, 6, 120));
+    assertFailedParse("519_dotNotationInvalidStateName.ump", new Position("519_dotNotationInvalidStateName.ump", 12, 6, 120), 152);
+  }
+  
+  @Test
+  public void dotNotationAtLevelAbove(){
+    assertNoWarnings("519_dotNotationAtLevelAbove.ump");
     
     UmpleClass c = model.getUmpleClass("X");
-    //assert num state machines = 2?
-    System.out.println("Num state machines: " + c.numberOfStateMachines());
+
+    StateMachine sm = c.getStateMachine(0);
+    State s1 = sm.getState(0);
+    StateMachine s1Sm = s1.getNestedStateMachine(0);
+    State s1ss1 = s1Sm.getState(0); //state second dot notation transition should point
+    
+    State s2 = sm.getState(1);
+    StateMachine s2Sm = s2.getNestedStateMachine(0);
+    State s2ss1 = s2Sm.getState(0);
+    State s2ss2 = s2Sm.getState(1); //state first dot notation should point to
+    
+    Transition tTos2ss2 = s2ss1.getTransition(0);
+    Transition tTos1ss1 = s2ss2.getTransition(0);
+    
+    //assert they are equal 
+    Assert.assertEquals(s2ss2, tTos2ss2.getNextState());
+    Assert.assertEquals(s1ss1, tTos1ss1.getNextState());
+  }
+  
+  @Test
+  public void dotNotationAtSameLevel(){
+    assertNoWarnings("519_dotNotationAtSameLevel.ump");
+    
+    UmpleClass c = model.getUmpleClass("X");
+
+    //get state that transition should point to
     StateMachine sm = c.getStateMachine(0);
     State s1 = sm.getState(0);
     StateMachine innerSm = s1.getNestedStateMachine(0);
     State ss1 = innerSm.getState(0);
     
+    //get state that transition does point to
     State s2 = sm.getState(1);
     Transition t = s2.getTransition(0);
     
+    //assert they are equal
     Assert.assertEquals(ss1, t.getNextState());
 
   }

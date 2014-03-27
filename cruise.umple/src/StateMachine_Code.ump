@@ -231,67 +231,67 @@ class StateMachine
     }
   }  
   
-  public State findStateDotNotaion(String aName, State fromState)
+  public State findStateDotNotaion(String aName)
   {
     //TODO: add suport to look deeper first
     //look at this level for first name in s1.s2.s3, then check nested sms for s1
     //then go up until you find then go down
     
-    //from getRootStateMachine
     StateMachine root = this;
-    State nextState;
+    State state;
     
     String[] stateNames = aName.split("\\.");
-    System.out.println("aName: " + aName + "  StateNames length: " + stateNames.length + " StateNames: " + stateNames[0]);
     int stateNameIndex = 0;
     String stateNameToFind = stateNames[stateNameIndex];
     
+    //find first state in dot notation by looking at level of transition
+    //then looking in each parent state machine until at top
     while (true)
     {
-      nextState = root.findState(stateNameToFind, false);
-      if (nextState != null)
+      state = root.findState(stateNameToFind, false);
+      if (state != null)//we found the first state
       {
-        System.out.println("found first state");
-        root = nextState.getStateMachine();
+        System.out.println("found first state: " + state.getName());
+        root = state.getStateMachine();
         break;
       }
       else
       {
-        nextState = root.getParentState();
-        if(nextState == null){return null;}
-        root = nextState.getStateMachine();
+        state = root.getParentState();
+        if(state == null){return null;}
+        root = state.getStateMachine();
       }
     }
     
-    //Enter found state's state machine
-    
-     
+    //Starting at the state found above, search nested state machines for the 
+    //next item in stateNames until at end of stateNames
     stateNameIndex = 1;
     while(stateNameIndex < stateNames.length)
     {
+      State tmpState = null;
       stateNameToFind = stateNames[stateNameIndex];
-      System.out.println("About to search for " + stateNameToFind);
-      for (StateMachine sm : nextState.getNestedStateMachines())
+      System.out.println("Searching for: " + stateNameToFind);
+      for (StateMachine sm : state.getNestedStateMachines())
       {  
-        for (State s : sm.states)
-        {
-          System.out.println("State Name: " + s.getName());
-        } 
-        nextState = sm.findState(stateNameToFind, false);
-        System.out.println("findState returned " + nextState);
-        if(nextState != null){break;}
+        for (State s : sm.getStates()){System.out.println("State in sm: " + s.getName());}
+        tmpState = sm.findState(stateNameToFind, false);
+        if(tmpState != null){
+          System.out.println("Found!: " + tmpState.getName());
+          break;}
       }
       //if the next state in dot noation is not found in previous state in dot notation, return null
-      if(nextState == null){return null;}
+      state = tmpState;
+      if(state == null){return null;}
              
       stateNameIndex += 1;
     }
     
-    return nextState;
+    return state;
   }
   
   private State findState(String aName, boolean searchNestedStateMachines, boolean didFindRoot)
   {
+    System.out.println("In findState: " + aName);
   
     StateMachine root = this;
     if (!didFindRoot && searchNestedStateMachines)
@@ -301,6 +301,16 @@ class StateMachine
     
     for (State aState : root.states)
     {
+      if (aState.getName().indexOf('.') > 0)
+      {
+        //in placeHolderStateMachine
+        if (aName.endsWith(aState.getName()))
+        {
+          System.out.println("Woo!!: " + aState.getName());
+          root.recentSearchDepth=0;
+          return aState;
+        }
+      }
       if (aState.getName().equals(aName))
       {
         root.recentSearchDepth=0;
@@ -319,6 +329,13 @@ class StateMachine
           } 
         }
       }
+    }
+    //must be last so that searching placeHolderStateMachine for states that
+    //were declared in a transition earlier works
+    if(aName.indexOf('.') > 0)
+    {
+      System.out.println("About to go into dotNotation");
+      return findStateDotNotaion(aName);
     }
     return null;
   }

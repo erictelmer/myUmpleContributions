@@ -35,16 +35,30 @@ class UmpleInternalParser
   
   //Checks to see if stateName is alpha-numeric or H*, for deep history
   private void checkStateNameOfToken(Token myToken){
-    //allow H* for deep history state
-    String[] stateNames = myToken.getValue("stateName").split("\\.");
-    for(String stateName : stateNames)
+    
+    boolean shouldBeLast = false;
+    
+    if (myToken.is("transition"))
     {
-      if (stateName.equals("H*")){
-        continue;
+      String[] stateNames = myToken.getValue("stateName").split("\\.");
+      for(String stateName : stateNames)
+      {
+        if(shouldBeLast){setFailedPosition(myToken.getPosition(), 152, myToken.getValue("stateName"));}
+        
+        if (stateName.equals("H*") || stateName.equals("H")){
+          shouldBeLast = true; //H* and H must be the last state in dotNotation
+          continue;
+        }
+        
+        if(!myToken.isValidIdentifier(stateName)){
+          setFailedPosition(myToken.getPosition(), 152, myToken.getValue("stateName"));
+        }
       }
-      if(!myToken.isValidIdentifier(stateName)){
-        setFailedPosition(myToken.getPosition(), 152, myToken.getValue("stateName"));
-      }
+    }
+    else{
+      if(!myToken.isValidIdentifier(myToken.getValue("stateName"))){
+          setFailedPosition(myToken.getPosition(), 152, myToken.getValue("stateName"));
+        }
     }
   }
   
@@ -447,21 +461,10 @@ class UmpleInternalParser
     
     StateMachine sm = fromState.getStateMachine();
     
-    //either name the dot notation something other than "stateName", or check stateName for "."
     String name = transitionToken.getValue("stateName");
-    //if has dots recurse, find first state
-    //if has dots; State nextState = sm.findStateDotNotation(name, fromState);
     State nextState;
-    if(name.indexOf('.') >= 0)
-    {
-      nextState = sm.findStateDotNotaion(name, fromState);
-      if(nextState == null)
-      {
-        //setFailedPosition
-        setFailedPosition(transitionToken.getPosition(), 63, transitionToken.getValue("stateName"));
-      }
-    }
-    else{nextState = sm.findState(name);}
+    
+    nextState = sm.findState(name);
     
     if ("Final".equals(name))
     {
@@ -484,15 +487,38 @@ class UmpleInternalParser
     }
     return nextState;
   }
+  
+  private String createDotNotationName(String stateName, StateMachine sm)
+  {
+    String finalName = stateName;
+    State pState = sm.getParentState();
+    StateMachine root = null;
+    while (pState != null)
+    {
+      finalName = pState.getName().concat("." + finalName);
+      System.out.println("post tmpName = " + finalName);
+      root = pState.getStateMachine();
+      pState = root.getParentState();
+    }
+    return finalName;
+  }
 
   private State createStateFromDefinition(Token stateToken, StateMachine sm)
   {
+    System.out.println("Creating stateFromDefinition: " + stateToken.getValue("stateName"));
     checkStateNameOfToken(stateToken);
     
     State s = sm.findState(stateToken.getValue("stateName"),false);
     if (s == null)
     {
+      System.out.println("Searching placeHolder");
       s = placeholderStateMachine.findState(stateToken.getValue("stateName"));
+      if (s == null)
+      {
+        String dotName = createDotNotationName(stateToken.getValue("stateName"), sm);
+        System.out.println("Made dot name: " + dotName);
+        s = placeholderStateMachine.findState(dotName);
+      }
       if (s != null)
       {
         s.setStateMachine(sm);

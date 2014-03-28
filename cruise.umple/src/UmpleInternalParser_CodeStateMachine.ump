@@ -518,9 +518,11 @@ class UmpleInternalParser
         String dotName = createDotNotationName(stateToken.getValue("stateName"), sm);
         System.out.println("Made dot name: " + dotName);
         s = placeholderStateMachine.findState(dotName);
+      
       }
       if (s != null)
       {
+        s.setName(stateToken.getValue("stateName"));
         s.setStateMachine(sm);
       }
     }

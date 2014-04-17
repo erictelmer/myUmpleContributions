@@ -65,6 +65,8 @@
 61: 1, "http://umple.org/PageBeingDeveloped.html", class {0} must have no queued state machine and regular state machine in the same class;
 62: 4, "http://umple.org/PageBeingDeveloped.html", (unspecified) must not be used in combination with Pooled State machine {0} - it is treated such as other regular events - it is pooled;
 
+80: 4, "http://umple.org/PageBeingDeveloped.html", State '{0}' was not found in state machine '{1}'. Processed as if the state exists ;
+
 # Messages relating to format of identifiers.
 100: 2, "http://umple.org/WE1xxIdentifierInvalid.html", Class name '{0}' must be alphanumeric and start with an alpha character, or _  ;
 101: 4, "http://umple.org/WE1xxIdentifierInvalid.html", Class name '{0}' should start with a capital letter ;
@@ -126,9 +128,14 @@
 2551: 1, "http://umple.org", Trait named '{0}' cannot inherit from itself. Solution: Please check the name of super trait or change your design not to have this inheritance.;
 2552: 4, "http://umple.org", Attribute '{0}' is available in both class '{1}' and trait '{2}'. Solution: Please just remove the attribute from the trait.;
 2553: 1, "http://umple.org", Trait '{0}' cannot cyclically extend '{1}'.;  
-2554: 1, "http://umple.org", Variable '{0}' inside of the constraint in Trait '{1}' is not availabe in class '{2}' or trait '{1}'.;
+2554: 1, "http://umple.org", Variable '{0}' inside of the constraint in trait '{1}' is not available in class '{2}' or trait '{1}'.;
+2555: 1, "http://umple.org", The required method '{0}' in trait '{1}' is not available in class '{2}'.;
+2556: 1, "http://umple.org", The defined name '{0}' in trait '{1}' is not available in the trait's header.;
 
 # Messages related to templates
 3500: 2, "http://umple.org", Template name '{0}' must be alphanumeric and start with an alpha character, or _  ;
 3501: 2, "http://umple.org", Template emit method can not be a main;
 3502: 1, "http://umple.org", Template name '{0}' can not be resolved;
+
+# Messages related to fixml
+4500: 1,  "http://umple.org", The tag '{0}' is not closed correctly.  ;

@@ -115,6 +115,25 @@ class StateMachine
     }
     return allEvents;
   }
+  
+  public ArrayList<Transition> getAllTransitions()
+  {
+    ArrayList<Transition> allTransitions = new ArrayList<Transition>();
+    ArrayList<StateMachine> allStateMachines = new ArrayList<StateMachine>();
+    allStateMachines.add(this);
+    addNestedStateMachinesTo(allStateMachines, this);
+    for (StateMachine sm : allStateMachines)
+    {
+      for (State state : sm.getStates())
+      {
+        for (Transition t : state.getTransitions())
+        {
+          allTransitions.add(t);
+        }
+      }
+    }
+    return allTransitions;
+  }
 
   public State findState(String aName)
   {
@@ -251,7 +270,6 @@ class StateMachine
       state = root.findState(stateNameToFind, false);
       if (state != null)//we found the first state
       {
-        System.out.println("found first state: " + state.getName());
         root = state.getStateMachine();
         break;
       }
@@ -270,13 +288,10 @@ class StateMachine
     {
       State tmpState = null;
       stateNameToFind = stateNames[stateNameIndex];
-      System.out.println("Searching for: " + stateNameToFind);
       for (StateMachine sm : state.getNestedStateMachines())
       {  
-        for (State s : sm.getStates()){System.out.println("State in sm: " + s.getName());}
         tmpState = sm.findState(stateNameToFind, false);
         if(tmpState != null){
-          System.out.println("Found!: " + tmpState.getName());
           break;}
       }
       //if the next state in dot noation is not found in previous state in dot notation, return null
@@ -291,8 +306,7 @@ class StateMachine
   
   private State findState(String aName, boolean searchNestedStateMachines, boolean didFindRoot)
   {
-    System.out.println("In findState: " + aName);
-  
+    
     StateMachine root = this;
     if (!didFindRoot && searchNestedStateMachines)
     {
@@ -303,10 +317,10 @@ class StateMachine
     {
       if (aState.getName().indexOf('.') > 0)
       {
-        //in placeHolderStateMachine
-        if (aName.endsWith(aState.getName()))
+        //this is a state in placeHolderStateMachine saved from a transition
+        //that used dot-notation to transition to a state that hadn't been declared yet
+        if (aName.endsWith(aState.getName()))//aName must be in dot notation
         {
-          System.out.println("Woo!!: " + aState.getName());
           root.recentSearchDepth=0;
           return aState;
         }
@@ -334,7 +348,6 @@ class StateMachine
     //were declared in a transition earlier works
     if(aName.indexOf('.') > 0)
     {
-      System.out.println("About to go into dotNotation");
       return findStateDotNotaion(aName);
     }
     return null;
@@ -389,6 +402,20 @@ class State
     State mySuper = findSuperState(this,relativeTo);
     State yourSuper = findSuperState(state,relativeTo);
     return mySuper != null && mySuper.equals(yourSuper); 
+  }
+
+  // return true of this is a substate of or same as possibleSuperState
+  public boolean isSubstateOf(State possibleSuperState) {
+    if(this.equals(possibleSuperState)) {
+      return true;
+    }
+    State parent = this.getStateMachine().getParentState();
+    if(parent == null) {
+      return false;
+    }
+    else {
+      return parent.isSubstateOf(possibleSuperState);
+    }
   }
   
   private State findSuperState(State me, StateMachine lookFor)

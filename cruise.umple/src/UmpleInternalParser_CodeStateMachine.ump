@@ -265,6 +265,62 @@ class UmpleInternalParser
           existingStateMachineNames.add(sm.getName());
       }
       
+      Boolean foundQueued = false;
+      Boolean foundPooled = false;
+      Boolean foundRegularSM = false;
+      Boolean foundEventlessRegularSM = false;
+      Token stateMachineToken=null;
+    
+      for (StateMachine sm : C.getStateMachines())
+      {
+        if(sm.getQueued())
+        {
+          foundQueued = true;
+          stateMachineToken = stateMachineNameToToken.get(sm.getName());
+        }
+        else if(sm.getPooled())
+        {
+          foundPooled = true;
+          stateMachineToken = stateMachineNameToToken.get(sm.getName());
+        }
+        else if(!sm.getQueued() && !sm.getPooled())
+        {
+          if(sm.getEvents().isEmpty())
+          {
+            foundEventlessRegularSM = true;
+            foundRegularSM = true;
+            stateMachineToken = stateMachineNameToToken.get(sm.getName());
+          }
+          else
+          {
+            foundEventlessRegularSM = false;
+            foundRegularSM = true;
+            stateMachineToken = stateMachineNameToToken.get(sm.getName());
+          }
+        }  
+      }
+    
+      if (foundQueued == true && foundPooled == true && foundRegularSM == true)
+      {
+        //raise an error if QSM, PooledSM and RegularSM are used in the same class
+        setFailedPosition(stateMachineToken.getPosition(), 58, C.getName());
+      }
+      else if(foundQueued == true && foundPooled == true && foundRegularSM == false)
+      {
+        //raise an error if QSM and PooledSM are used in the same class
+        setFailedPosition(stateMachineToken.getPosition(), 59, C.getName());
+      }
+      else if(foundQueued == false && foundPooled == true && foundRegularSM == true && foundEventlessRegularSM == false)
+      {
+        //raise an error if PooledSM and RegularSM are used in the same class
+        setFailedPosition(stateMachineToken.getPosition(), 60, C.getName());
+      }
+      else if(foundQueued == true && foundPooled == false && foundRegularSM == true && foundEventlessRegularSM == false)
+      {
+        //raise an error if QSM and RegularSM are used in the same class
+        setFailedPosition(stateMachineToken.getPosition(), 61, C.getName());
+      }
+
       List<String> existingAssociationNames = new ArrayList<String>();
       List<Association> visitedAssociations = new ArrayList<Association>();
       for(Association assoc : C.getAssociations())
@@ -412,9 +468,50 @@ class UmpleInternalParser
     
     populateStateMachine(stateMachineToken, sm, uClassifier);
 
+    //Place all states from transitions that weren't declared in the StateMachine
+    //TODO: start at level of transition
+    //TOcheck: multiple transitions to same state?
+    ArrayList<Transition> allTransitions = sm.getAllTransitions();
     while (placeholderStateMachine.numberOfStates() > 0)
     {
-      placeholderStateMachine.getState(0).setStateMachine(sm);
+      State s = placeholderStateMachine.getState(0);
+      if (s.getName().indexOf('.') > 0)
+      {
+        for (Transition t : allTransitions)
+        {
+          if (t.getNextState().equals(s))
+          {
+            System.out.println("Found matching transition for " + s.getName());
+            String toState = s.getName();
+            String tmpName = toState;
+            String[] stateNames = tmpName.split("\\.");
+            //Strip last state from dotNotation
+            while(tmpName.contains(".")){
+              tmpName = tmpName.substring(0,tmpName.lastIndexOf('.'));
+              State superState = sm.findState(tmpName);
+              if(superState != null)
+              {
+                System.out.println("Found a super state " + superState.getName() + " for state " + toState);
+                for (StateMachine nesSm : superState.getNestedStateMachines()){
+                  s.setStateMachine(nesSm);
+                }
+                s.setName(stateNames[stateNames.length - 1]);
+                if (s.getName().equals("H"))
+                {
+                  s.getStateMachine().setContainsHistoryState(true);
+                }
+                break;
+              }
+              if(!tmpName.contains("."))
+              {
+                s.setName(stateNames[stateNames.length - 1]);
+                s.setStateMachine(sm);
+              }
+            }
+          }
+        }
+      }
+      else{s.setStateMachine(sm);}
     }
     
     if(sm.getQueued() || sm.getPooled())
@@ -455,11 +552,9 @@ class UmpleInternalParser
     return sm;
   }
 
-  private State createStateFromTransition(Token transitionToken, State fromState)
+  private State createStateFromTransition(Token transitionToken, StateMachine sm)
   {
     checkStateNameOfToken(transitionToken);
-    
-    StateMachine sm = fromState.getStateMachine();
     
     String name = transitionToken.getValue("stateName");
     State nextState;
@@ -476,6 +571,7 @@ class UmpleInternalParser
       {
         nextState = placeholderStateMachine.findState(name);
         if(nextState != null)possiblyUnknownStates.get(nextState).add(transitionToken);
+        if(placeholderStateMachine.getParentState() != null){System.out.println("Has Parent!");}
       }
 
       if (nextState == null)
@@ -496,7 +592,6 @@ class UmpleInternalParser
     while (pState != null)
     {
       finalName = pState.getName().concat("." + finalName);
-      System.out.println("post tmpName = " + finalName);
       root = pState.getStateMachine();
       pState = root.getParentState();
     }
@@ -505,18 +600,15 @@ class UmpleInternalParser
 
   private State createStateFromDefinition(Token stateToken, StateMachine sm)
   {
-    System.out.println("Creating stateFromDefinition: " + stateToken.getValue("stateName"));
     checkStateNameOfToken(stateToken);
     
     State s = sm.findState(stateToken.getValue("stateName"),false);
     if (s == null)
     {
-      System.out.println("Searching placeHolder");
       s = placeholderStateMachine.findState(stateToken.getValue("stateName"));
       if (s == null)
       {
         String dotName = createDotNotationName(stateToken.getValue("stateName"), sm);
-        System.out.println("Made dot name: " + dotName);
         s = placeholderStateMachine.findState(dotName);
       
       }
@@ -601,8 +693,6 @@ class UmpleInternalParser
     boolean isConcurrentState = false;
     boolean isFinalState = false;
     String changeType = null;
-    State historyState = null;
-    State deepHistoryState = null;
     
     for(Token subToken : stateToken.getSubTokens())
     {
@@ -662,8 +752,6 @@ class UmpleInternalParser
           nestedStateMachine = fromState.getNestedStateMachine(lastIndex);
         }
         State s = createStateFromDefinition(subToken,nestedStateMachine);
-        if (s.getName().equals("H")){historyState=s;}
-        if (s.getName().equals("H*")){deepHistoryState=s;}
         //alignStateDefinitionWithStateMachine(s,nestedStateMachine);
         if (addNewSm)
         {
@@ -677,23 +765,9 @@ class UmpleInternalParser
         analyzeState(subToken, s);
       }
     }
-    //add gaurded transitions to history and deep history states
-    if (historyState != null){
-      //fromState.setContainsHistoryState(true);
-      populateHistoryState(historyState, fromState);
-    }
-    if (deepHistoryState != null){
-      //fromState.setContainsDeepHistoryState(true);
-      populateHistoryState(deepHistoryState, fromState);
-    }
   }
 
-  private void populateHistoryState(State hState, State fromState){
-    //isDeep = state.isADeepHistoryState();
-    //for all states in fromState, add a guarded transition to that state
-  }
-
-	//Telmer
+	//Code written by Eric Telmer
   private void checkStateMachineForDuplicateEvents(Token stateMachineToken){
     for (Token subToken : stateMachineToken.getSubTokens()){
       if (subToken.is("state")){
@@ -814,7 +888,7 @@ class UmpleInternalParser
 
   private void analyzeTransition(boolean isAutoTransition, Token transitionToken, State fromState, String changeType)
   {
-    State nextState = createStateFromTransition(transitionToken,fromState);
+    State nextState = createStateFromTransition(transitionToken,fromState.getStateMachine());
     
     Transition t; 
     if ("-".equals(changeType))
@@ -870,9 +944,15 @@ class UmpleInternalParser
         event.setTimerInSeconds(eventTimerAmount);
       }
       
-      if(event.getName().equals("unspecified"))
+      if(event.getName().equals("unspecified") && !sm.getPooled())
       {
         event.setUnspecified(true);
+      }
+      
+      if(event.getName().equals("unspecified") && sm.getPooled())
+      {
+        Token eventToken = transitionToken.getSubToken("event");
+        setFailedPosition(eventToken.getPosition(),62, sm.getName());
       }
       
       t.setEvent(event);
@@ -958,7 +1038,7 @@ class UmpleInternalParser
           Activity act = analyzeActivity(subToken, fromState);
           act.setOnCompletionEvent(event);
         }
-      }      
+    }      
     
     }
 

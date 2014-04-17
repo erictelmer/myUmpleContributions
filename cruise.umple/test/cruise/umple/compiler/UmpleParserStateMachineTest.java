@@ -176,6 +176,7 @@ public class UmpleParserStateMachineTest
     State s1 = sm.getState(0);
     StateMachine s1Sm = s1.getNestedStateMachine(0);
     State s1ss1 = s1Sm.getState(0); //state second dot notation transition should point
+    Transition tTos2ss1 = s1Sm.getState(1).getTransition(0);
     
     State s2 = sm.getState(1);
     StateMachine s2Sm = s2.getNestedStateMachine(0);
@@ -185,9 +186,15 @@ public class UmpleParserStateMachineTest
     Transition tTos2ss2 = s2ss1.getTransition(0);
     Transition tTos1ss1 = s2ss2.getTransition(0);
     
+    //assert Names are correct
+    Assert.assertEquals(tTos2ss2.getNextState().getName(), "ss2");
+    Assert.assertEquals(tTos2ss1.getNextState().getName(), "ss1");
+    Assert.assertEquals(tTos1ss1.getNextState().getName(), "ss1");
+    
     //assert they are equal 
     Assert.assertEquals(s2ss2, tTos2ss2.getNextState());
     Assert.assertEquals(s1ss1, tTos1ss1.getNextState());
+    Assert.assertEquals(s2ss1, tTos2ss1.getNextState());
   }
   
   @Test

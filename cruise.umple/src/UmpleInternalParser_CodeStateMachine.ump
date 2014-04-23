@@ -33,7 +33,7 @@ class UmpleInternalParser
     return true; //We have an identifier followed by a { followe by something else that is probably a state machine
   }
   
-  //Checks to see if stateName is alpha-numeric or H*, for deep history
+  //Checks to see if stateName is alpha-numeric or HStar, for deep history
   private void checkStateNameOfToken(Token myToken){
     
     boolean shouldBeLast = false;
@@ -45,8 +45,8 @@ class UmpleInternalParser
       {
         if(shouldBeLast){setFailedPosition(myToken.getPosition(), 152, myToken.getValue("stateName"));}
         
-        if (stateName.equals("H*") || stateName.equals("H")){
-          shouldBeLast = true; //H* and H must be the last state in dotNotation
+        if (stateName.equals("HStar") || stateName.equals("H")){
+          shouldBeLast = true; //HStar and H must be the last state in dotNotation
           continue;
         }
         
@@ -486,6 +486,8 @@ class UmpleInternalParser
             String tmpName = toState;
             String[] stateNames = tmpName.split("\\.");
             //Strip last state from dotNotation
+            //If the super state does not have a state machine then the state will be added to the top level sm
+            //TODO: check that the top level doesn't have a state with the same name
             while(tmpName.contains(".")){
               tmpName = tmpName.substring(0,tmpName.lastIndexOf('.'));
               State superState = sm.findState(tmpName);
@@ -499,6 +501,10 @@ class UmpleInternalParser
                 if (s.getName().equals("H"))
                 {
                   s.getStateMachine().setContainsHistoryState(true);
+                }
+                if (s.getName().equals("HStar"))
+                {
+                  s.getStateMachine().setContainsDeepHistoryState(true);
                 }
                 break;
               }

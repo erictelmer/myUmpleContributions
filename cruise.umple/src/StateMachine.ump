@@ -33,8 +33,8 @@ class StateMachine
   
   before setUmpleClass { if (aUmpleClass != null && aUmpleClass.isImmutable()) { return false; } }
   before setUmpleTrait { if (aUmpleTrait != null && aUmpleTrait.isImmutable()) { return false; } }
-  //before containsAHistoryState { if ("H".equals(name)) { containsHistoryState = true; } }
-  //before containsADeepHistoryState { if ("H*".equals(name)) { containsDeepHistoryState = true; } }
+  before getContainsHistoryState { if ("H".equals(name)) { containsHistoryState = true; } }
+  before getContainsDeepHistoryState { if ("HStar".equals(name)) { containsDeepHistoryState = true; } }
   
   Boolean queued = false;
   Boolean pooled = false;

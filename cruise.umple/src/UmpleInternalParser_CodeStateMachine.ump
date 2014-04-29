@@ -481,7 +481,6 @@ class UmpleInternalParser
         {
           if (t.getNextState().equals(s))
           {
-            System.out.println("Found matching transition for " + s.getName());
             String toState = s.getName();
             String tmpName = toState;
             String[] stateNames = tmpName.split("\\.");
@@ -493,9 +492,10 @@ class UmpleInternalParser
               State superState = sm.findState(tmpName);
               if(superState != null)
               {
-                System.out.println("Found a super state " + superState.getName() + " for state " + toState);
                 for (StateMachine nesSm : superState.getNestedStateMachines()){
+                  //TODO: add support for concurrent sm
                   s.setStateMachine(nesSm);
+                  break;
                 }
                 s.setName(stateNames[stateNames.length - 1]);
                 if (s.getName().equals("H"))
@@ -504,7 +504,9 @@ class UmpleInternalParser
                 }
                 if (s.getName().equals("HStar"))
                 {
+                  //TODO: if there was a state declared as HStar this point will never be reached
                   s.getStateMachine().setContainsDeepHistoryState(true);
+                  addDeepHistoryStatesToNestedStateMachines(s);
                 }
                 break;
               }
@@ -519,6 +521,7 @@ class UmpleInternalParser
       }
       else{s.setStateMachine(sm);}
     }
+    
     
     if(sm.getQueued() || sm.getPooled())
     {
@@ -588,6 +591,19 @@ class UmpleInternalParser
       }
     }
     return nextState;
+  }
+  
+  private void addDeepHistoryStatesToNestedStateMachines(State deepState)
+  {
+    StateMachine sm = deepState.getStateMachine();
+    for (StateMachine nesSm : sm.getNestedStateMachines())
+    {
+      if (nesSm.getDeepHistoryState() == null)
+      {
+        State s = new State("HStar", nesSm);
+        nesSm.setContainsDeepHistoryState(true);
+      }
+    }
   }
   
   private String createDotNotationName(String stateName, StateMachine sm)

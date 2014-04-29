@@ -135,6 +135,18 @@ class StateMachine
     return allTransitions;
   }
 
+  public State getDeepHistoryState()
+  {
+    for (State s : this.getStates())
+    {
+      if (s.getIsDeepHistoryState() == true)
+      {
+          return s;
+      }
+    }
+    return null;
+  }
+
   public State findState(String aName)
   {
     boolean isFinal = "Final".equals(aName);

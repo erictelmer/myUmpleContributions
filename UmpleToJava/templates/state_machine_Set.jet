@@ -107,8 +107,8 @@
           
 
           //TODO: add more spaces if deepHistory
-          entryActions.append(StringFormatter.format("{0}{1}({2}{3});","\n          ",gen.translate("setMethod",state.getStateMachine()),gen.translate("stateMachineOne",state.getStateMachine()),gen.translate("stateOne",state)));
-          entryJavaLine++;
+          //entryActions.append(StringFormatter.format("{0}{1}({2}{3});","\n          ",gen.translate("setMethod",state.getStateMachine()),gen.translate("stateMachineOne",state.getStateMachine()),gen.translate("stateOne",state)));
+          //entryJavaLine++;
           entryActions.append("\n        }");
           entryJavaLine++;
         }
@@ -261,6 +261,11 @@
     {
       <%= entryActions %>
     }
+<% } %>
+<% if (parentState != null) { %>
+  <% if (sm.getContainsDeepHistoryState()) { %>
+    if (<%= gen.translate("parameterOne",sm) %> == <%= gen.translate("type",sm)  %>.HStar) { <%= gen.translate("stateMachineOne",sm) %> = <%= gen.translate("stateMachineOne", sm) %>HStar;}
+  <% } %>
 <% } %>
   }
 

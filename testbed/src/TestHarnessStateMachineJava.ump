@@ -270,3 +270,38 @@ class HistoryCourse
     }
   }
 }
+
+class DeepHistoryCourse
+{
+  Sm {
+    S1 {
+      Ss1 {
+        Sss1{
+          toSs2Sss2 -> Ss2.Sss2;
+          toS2 -> S2;
+        }
+        Sss2{
+          toS2 -> S2;
+        }
+      }
+      Ss2 {
+        Sss1{
+          toSss2 -> Sss2;
+          toS2 -> S2;
+        }
+        Sss2{
+          Ssss1{
+            toSsss2 -> Ssss2;
+          }
+          Ssss2{
+            toS2 -> S2;
+          }
+        }
+      }
+    }
+    S2 {
+      toDeepHistory -> S1.HStar;
+      toS1Ss2 -> S1.Ss2;
+    }
+  }
+}

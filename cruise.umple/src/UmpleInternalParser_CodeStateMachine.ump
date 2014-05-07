@@ -38,7 +38,7 @@ class UmpleInternalParser
     
     boolean shouldBeLast = false;
     
-    if (myToken.is("transition"))
+    if (myToken.is("transition") || myToken.is("autoTransition"))
     {
       String[] stateNames = myToken.getValue("stateName").split("\\.");
       for(String stateName : stateNames)
@@ -498,13 +498,14 @@ class UmpleInternalParser
                   break;
                 }
                 s.setName(stateNames[stateNames.length - 1]);
-                if (s.getName().equals("H"))
+                if (s.getIsHistoryState())
                 {
+                  possiblyUnknownStates.remove(s);
                   s.getStateMachine().setContainsHistoryState(true);
                 }
-                if (s.getName().equals("HStar"))
+                if (s.getIsDeepHistoryState())
                 {
-                  //TODO: if there was a state declared as HStar this point will never be reached
+                  possiblyUnknownStates.remove(s);
                   s.getStateMachine().setContainsDeepHistoryState(true);
                   addDeepHistoryStatesToNestedStateMachines(s);
                 }
@@ -513,13 +514,26 @@ class UmpleInternalParser
               if(!tmpName.contains("."))
               {
                 s.setName(stateNames[stateNames.length - 1]);
+                //TODO: check to make sure there are no other states at this level with same name
+                if (s.getIsHistoryState() || s.getIsDeepHistoryState())
+                {
+                  setFailedPosition(stateMachineToken.getPosition(), 64, sm.getName());
+                }
                 s.setStateMachine(sm);
               }
             }
           }
         }
       }
-      else{s.setStateMachine(sm);}
+      else
+      {
+        if (s.getIsHistoryState() || s.getIsDeepHistoryState())
+        {
+          //TODO: find transition token to raise error at correct position
+          setFailedPosition(stateMachineToken.getPosition(), 65, sm.getName());
+        }
+        s.setStateMachine(sm);
+      }
     }
     
     
@@ -580,7 +594,6 @@ class UmpleInternalParser
       {
         nextState = placeholderStateMachine.findState(name);
         if(nextState != null)possiblyUnknownStates.get(nextState).add(transitionToken);
-        if(placeholderStateMachine.getParentState() != null){System.out.println("Has Parent!");}
       }
 
       if (nextState == null)
@@ -643,6 +656,10 @@ class UmpleInternalParser
     if (s == null)
     {
       s = new State(stateToken.getValue("stateName"),sm);
+    }
+    if (s.getIsHistoryState() || s.getIsDeepHistoryState())
+    {
+      setFailedPosition(stateToken.getPosition(), 63, stateToken.getName());
     }
     possiblyUnknownStates.remove(s);
     return s;
@@ -835,7 +852,11 @@ class UmpleInternalParser
           unguardedEvents.add(subToken.getValue("event"));
         }
       }
-      if(subToken.is("state")){
+      else if(subToken.is("autoTransition")){
+        priorAutoTransitionExists = true;
+        superStateEvents.add(null);
+      }
+      else if(subToken.is("state")){
         subStates.add(subToken);
       }
     }

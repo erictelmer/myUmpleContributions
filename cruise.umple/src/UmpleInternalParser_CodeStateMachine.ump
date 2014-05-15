@@ -513,8 +513,8 @@ class UmpleInternalParser
               }
               if(!tmpName.contains("."))
               {
-                s.setName(stateNames[stateNames.length - 1]);
                 //TODO: check to make sure there are no other states at this level with same name
+                s.setName(stateNames[stateNames.length - 1]);
                 if (s.getIsHistoryState() || s.getIsDeepHistoryState())
                 {
                   setFailedPosition(stateMachineToken.getPosition(), 64, sm.getName());
